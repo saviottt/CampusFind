@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Search — CampusFind{% endblock %}
+{% block content %}
+<div class="search-page">
+  <div class="search-hero">
+    <div class="container">
+      <h1>🔍 Search Items</h1>
+      <p>Filter through lost and found reports to find what you're looking for.</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <form method="get" action="{{ url_for('search') }}" class="search-form-full">
+      <div class="sf-main-row">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by name, description, keywords…" class="sf-main-input" autofocus/>
+        <button type="submit" class="btn btn-primary">Search</button>
+      </div>
+      <div class="sf-filters">
+        <select name="type">
+          <option value="">All Types</option>
+          <option value="lost" {{ 'selected' if item_type == 'lost' }}>Lost Items</option>
+          <option value="found" {{ 'selected' if item_type == 'found' }}>Found Items</option>
+        </select>
+        <select name="category">
+          <option value="">All Categories</option>
+          {% for cat in categories %}
+            <option {{ 'selected' if category == cat }}>{{ cat }}</option>
+          {% endfor %}
+        </select>
+        <select name="location">
+          <option value="">All Locations</option>
+          {% for loc in locations %}
+            <option {{ 'selected' if location == loc }}>{{ loc }}</option>
+          {% endfor %}
+        </select>
+        <div class="date-range">
+          <input type="date" name="date_from" value="{{ date_from }}" placeholder="From date" title="From date"/>
+          <span>to</span>
+          <input type="date" name="date_to" value="{{ date_to }}" placeholder="To date" title="To date"/>
+        </div>
+        {% if q or category or location or item_type or date_from or date_to %}
+        <a href="{{ url_for('search') }}" class="btn btn-ghost">Clear Filters</a>
+        {% endif %}
+      </div>
+    </form>
+
+    <div class="search-results-header">
+      {% if q or category or location or item_type %}
+        <p><strong>{{ results|length }}</strong> result{{ 's' if results|length != 1 }} found
+          {% if q %} for "<em>{{ q }}</em>"{% endif %}
+          {% if item_type %} in <strong>{{ item_type }}</strong> items{% endif %}
+          {% if category %} — Category: <strong>{{ category }}</strong>{% endif %}
+          {% if location %} — Location: <strong>{{ location }}</strong>{% endif %}
+        </p>
+      {% else %}
+        <p>Showing all <strong>{{ results|length }}</strong> active items</p>
+      {% endif %}
+    </div>
+
+    {% if results %}
+    <div class="items-grid">
+      {% for item in results %}
+        {% include 'partials/item_card.html' %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state large">
+      <span class="empty-icon">🔍</span>
+      <h3>No items found</h3>
+      <p>Try different keywords or clear some filters to broaden your search.</p>
+      <div class="empty-actions">
+        <a href="{{ url_for('report_item', item_type='lost') }}" class="btn btn-primary">Report Lost Item</a>
+        <a href="{{ url_for('search') }}" class="btn btn-ghost">Browse All Items</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

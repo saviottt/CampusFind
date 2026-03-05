@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Register — CampusFind{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-visual">
+    <div class="auth-visual-content">
+      <div class="auth-logo">🎓</div>
+      <h2>Join CampusFind</h2>
+      <p>Create your student account and become part of your campus community's trusted lost & found network.</p>
+      <div class="auth-features">
+        <div class="af-item"><span>✓</span> Free for all students</div>
+        <div class="af-item"><span>✓</span> Verified campus accounts only</div>
+        <div class="af-item"><span>✓</span> Secure & private messaging</div>
+        <div class="af-item"><span>✓</span> Instant match notifications</div>
+      </div>
+    </div>
+  </div>
+  <div class="auth-form-side">
+    <div class="auth-form-box">
+      <h1>Create Account</h1>
+      <p class="auth-sub">Fill in your student details below</p>
+      <form method="post" class="auth-form" id="regForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name <span class="req">*</span></label>
+            <input type="text" name="name" placeholder="Your full name" required/>
+          </div>
+          <div class="form-group">
+            <label>Student ID <span class="req">*</span></label>
+            <input type="text" name="student_id" placeholder="e.g. STU2024001" required/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>College Email Address <span class="req">*</span></label>
+          <input type="email" name="email" placeholder="your.id@college.edu" required/>
+        </div>
+        <div class="form-group">
+          <label>Department <span class="req">*</span></label>
+          <select name="department" required>
+            <option value="">— Select Department —</option>
+            <option>Computer Science & Engineering</option>
+            <option>Electronics & Communication</option>
+            <option>Mechanical Engineering</option>
+            <option>Civil Engineering</option>
+            <option>Information Technology</option>
+            <option>Business Administration</option>
+            <option>Commerce</option>
+            <option>Arts & Humanities</option>
+            <option>Science</option>
+            <option>Law</option>
+            <option>Medicine</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password <span class="req">*</span></label>
+            <div class="password-wrap">
+              <input type="password" name="password" id="pwd1" placeholder="Min. 6 characters" required minlength="6"/>
+              <button type="button" class="pw-toggle" onclick="togglePwd('pwd1',this)">👁</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Confirm Password <span class="req">*</span></label>
+            <div class="password-wrap">
+              <input type="password" name="confirm_password" id="pwd2" placeholder="Repeat password" required/>
+              <button type="button" class="pw-toggle" onclick="togglePwd('pwd2',this)">👁</button>
+            </div>
+          </div>
+        </div>
+        <div class="pwd-strength" id="pwdStrength"></div>
+        <button type="submit" class="btn btn-primary btn-full">Create Account →</button>
+      </form>
+      <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

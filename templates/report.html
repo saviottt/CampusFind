@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Report {{ item_type.title() }} Item — CampusFind{% endblock %}
+{% block content %}
+<div class="report-page">
+  <div class="report-header">
+    <div class="container">
+      <div class="rh-badge {{ item_type }}-badge-large">{{ '📋 LOST ITEM REPORT' if item_type == 'lost' else '🤲 FOUND ITEM REPORT' }}</div>
+      <h1>{{ "I Lost Something" if item_type == 'lost' else "I Found Something" }}</h1>
+      <p>{{ "Fill in the details below to report your lost item. Be as descriptive as possible." if item_type == 'lost' else "Help reunite someone with their belongings by reporting what you found." }}</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="report-layout">
+      <form method="post" enctype="multipart/form-data" class="report-form" id="reportForm">
+
+        <div class="form-section">
+          <h3 class="fs-title"><span>01</span> Item Details</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Item Name <span class="req">*</span></label>
+              <input type="text" name="title" placeholder="e.g. Blue Samsung Galaxy S23" required maxlength="100"/>
+            </div>
+            <div class="form-group">
+              <label>Category <span class="req">*</span></label>
+              <select name="category" required>
+                <option value="">— Select Category —</option>
+                {% for cat in categories %}
+                  <option>{{ cat }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Description <span class="req">*</span>
+              <span class="label-hint">Include color, brand, distinguishing features</span>
+            </label>
+            <textarea name="description" rows="4" placeholder="Describe the item in detail — color, size, brand, any unique marks or damage..." required maxlength="1000"></textarea>
+            <span class="char-count" id="descCount">0 / 1000</span>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="fs-title"><span>02</span> Location & Date</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ "Where did you lose it?" if item_type == 'lost' else "Where did you find it?" }} <span class="req">*</span></label>
+              <select name="location" required>
+                <option value="">— Select Campus Location —</option>
+                {% for loc in locations %}
+                  <option>{{ loc }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ "Date Lost" if item_type == 'lost' else "Date Found" }} <span class="req">*</span></label>
+              <input type="date" name="date_occurred" required max="{{ today }}"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="fs-title"><span>03</span> Photo Upload <span class="optional-tag">Optional but recommended</span></h3>
+          <div class="upload-area" id="uploadArea">
+            <input type="file" name="image" id="imageInput" accept="image/*" class="upload-input"/>
+            <div class="upload-placeholder" id="uploadPlaceholder">
+              <div class="upload-icon">📷</div>
+              <p>Drag & drop an image here, or <strong>click to browse</strong></p>
+              <small>PNG, JPG, GIF up to 16MB</small>
+            </div>
+            <div class="upload-preview" id="uploadPreview" style="display:none">
+              <img id="previewImg" src="" alt="Preview"/>
+              <button type="button" class="remove-img" id="removeImg">× Remove</button>
+            </div>
+          </div>
+        </div>
+
+        {% if item_type == 'lost' %}
+        <div class="form-section">
+          <h3 class="fs-title"><span>04</span> Contact Information</h3>
+          <div class="form-group">
+            <label>How can finders reach you?
+              <span class="label-hint">Phone number, alternate email, or preferred contact method</span>
+            </label>
+            <input type="text" name="contact_info" placeholder="e.g. 9876543210 or WhatsApp: 9876543210"/>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-lg">
+            {{ "🚨 Submit Lost Report" if item_type == 'lost' else "🤲 Submit Found Report" }}
+          </button>
+          <a href="{{ url_for('index') }}" class="btn btn-ghost btn-lg">Cancel</a>
+        </div>
+
+      </form>
+
+      <aside class="report-sidebar">
+        <div class="sidebar-card tips-card">
+          <h4>💡 Tips for better results</h4>
+          <ul>
+            <li>Add a clear photo if available</li>
+            <li>Be specific about the location</li>
+            <li>Include brand name and color</li>
+            <li>Mention any unique marks or damage</li>
+            <li>Provide reliable contact info</li>
+          </ul>
+        </div>
+        <div class="sidebar-card matching-card">
+          <h4>🤖 Auto-Matching</h4>
+          <p>After you submit, our system will instantly scan existing reports and suggest possible matches — you'll get notified right away!</p>
+        </div>
+        {% if item_type == 'found' %}
+        <div class="sidebar-card important-card">
+          <h4>⚠️ Important</h4>
+          <p>Please hand over valuable found items (wallets, IDs, keys) to your campus security or administration office for safekeeping while they're claimed.</p>
+        </div>
+        {% endif %}
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelector('[name="date_occurred"]').max = new Date().toISOString().split('T')[0];
+  const textarea = document.querySelector('textarea[name="description"]');
+  const counter = document.getElementById('descCount');
+  textarea.addEventListener('input', () => {
+    counter.textContent = `${textarea.value.length} / 1000`;
+  });
+  const uploadArea = document.getElementById('uploadArea');
+  const imageInput = document.getElementById('imageInput');
+  const placeholder = document.getElementById('uploadPlaceholder');
+  const preview = document.getElementById('uploadPreview');
+  const previewImg = document.getElementById('previewImg');
+  const removeBtn = document.getElementById('removeImg');
+
+  uploadArea.addEventListener('click', (e) => {
+    if (!e.target.closest('.remove-img')) imageInput.click();
+  });
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault(); uploadArea.classList.add('drag-over');
+  });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault(); uploadArea.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) showPreview(file);
+  });
+  imageInput.addEventListener('change', () => {
+    if (imageInput.files[0]) showPreview(imageInput.files[0]);
+  });
+  removeBtn.addEventListener('click', () => {
+    imageInput.value = '';
+    preview.style.display = 'none';
+    placeholder.style.display = 'flex';
+  });
+  function showPreview(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImg.src = e.target.result;
+      placeholder.style.display = 'none';
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+</script>
+{% endblock %}

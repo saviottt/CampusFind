@@ -1,0 +1,38 @@
+<a href="{{ url_for('item_detail', item_id=item.id) }}" class="item-card {{ item.type }}-card">
+  <div class="item-card-img">
+    {% if item.image_path %}
+      <img src="{{ url_for('static', filename='uploads/' + item.image_path) }}" alt="{{ item.title }}" loading="lazy"/>
+    {% else %}
+      <div class="item-no-img">
+        {% if item.category == 'Electronics' %}📱
+        {% elif item.category == 'Books & Stationery' %}📚
+        {% elif item.category == 'Clothing & Accessories' %}👕
+        {% elif item.category == 'Keys' %}🔑
+        {% elif item.category == 'Bags & Wallets' %}👜
+        {% elif item.category == 'ID Cards & Documents' %}🪪
+        {% elif item.category == 'Jewelry & Watches' %}💎
+        {% elif item.category == 'Headphones & Earbuds' %}🎧
+        {% else %}📦{% endif %}
+      </div>
+    {% endif %}
+    <span class="item-type-badge {{ item.type }}-badge">{{ item.type.upper() }}</span>
+    <span class="item-status-badge status-{{ item.status }}">
+      {% if item.status == 'active' %}● Active
+      {% elif item.status == 'returned' %}✓ Returned
+      {% else %}✕ Closed{% endif %}
+    </span>
+  </div>
+  <div class="item-card-body">
+    <span class="item-category">{{ item.category }}</span>
+    <h3 class="item-title">{{ item.title }}</h3>
+    <p class="item-desc">{{ item.description[:80] }}{% if item.description|length > 80 %}…{% endif %}</p>
+    <div class="item-meta">
+      <span class="meta-tag">📍 {{ item.location }}</span>
+      <span class="meta-tag">📅 {{ item.date_occurred }}</span>
+    </div>
+    <div class="item-footer">
+      <span class="item-owner">👤 {{ item.owner_name }}</span>
+      <span class="item-action">View Details →</span>
+    </div>
+  </div>
+</a>

@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} — CampusFind{% endblock %}
+{% block content %}
+<div class="detail-page">
+  <div class="container">
+
+    <div class="breadcrumb">
+      <a href="{{ url_for('index') }}">Home</a> /
+      <a href="{{ url_for('all_items', type=item.type) }}">{{ item.type.title() }} Items</a> /
+      <span>{{ item.title }}</span>
+    </div>
+
+    <div class="detail-layout">
+      <!-- Main Content -->
+      <div class="detail-main">
+        <div class="detail-card">
+          <div class="detail-top">
+            <span class="item-type-pill {{ item.type }}-pill">{{ item.type.upper() }}</span>
+            <span class="detail-status status-{{ item.status }}">
+              {% if item.status == 'active' %}● Active
+              {% elif item.status == 'returned' %}✓ Returned
+              {% else %}✕ Closed{% endif %}
+            </span>
+          </div>
+
+          <div class="detail-img-wrap">
+            {% if item.image_path %}
+              <img src="{{ url_for('static', filename='uploads/' + item.image_path) }}" alt="{{ item.title }}" class="detail-img"/>
+            {% else %}
+              <div class="detail-no-img">
+                <span>📦</span>
+                <p>No image provided</p>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="detail-info">
+            <h1 class="detail-title">{{ item.title }}</h1>
+            <span class="detail-category">{{ item.category }}</span>
+
+            <div class="detail-meta-grid">
+              <div class="dm-item">
+                <span class="dm-icon">📍</span>
+                <div><label>Location</label><strong>{{ item.location }}</strong></div>
+              </div>
+              <div class="dm-item">
+                <span class="dm-icon">📅</span>
+                <div><label>Date {{ "Lost" if item.type == "lost" else "Found" }}</label><strong>{{ item.date_occurred }}</strong></div>
+              </div>
+              <div class="dm-item">
+                <span class="dm-icon">🏷️</span>
+                <div><label>Category</label><strong>{{ item.category }}</strong></div>
+              </div>
+              <div class="dm-item">
+                <span class="dm-icon">🕐</span>
+                <div><label>Reported On</label><strong>{{ item.created_at[:10] }}</strong></div>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h3>Description</h3>
+              <p class="detail-desc">{{ item.description }}</p>
+            </div>
+
+            {% if item.contact_info %}
+            <div class="detail-section">
+              <h3>Contact Information</h3>
+              <p class="contact-info">{{ item.contact_info }}</p>
+            </div>
+            {% endif %}
+
+            <div class="detail-section">
+              <h3>Reported By</h3>
+              <div class="reporter-card">
+                <div class="reporter-avatar">{{ item.owner_name[0].upper() }}</div>
+                <div>
+                  <strong>{{ item.owner_name }}</strong>
+                  <small>{{ item.department }}</small>
+                  <small>Student ID: {{ item.student_id }}</small>
+                </div>
+              </div>
+            </div>
+
+            {% if session.user_id == item.user_id %}
+            <div class="detail-section owner-actions">
+              <h3>Update Status</h3>
+              <div class="status-btns">
+                <form method="post" action="{{ url_for('update_status', item_id=item.id) }}" style="display:inline">
+                  <input type="hidden" name="status" value="active"/>
+                  <button type="submit" class="btn btn-sm {{ 'btn-active-sel' if item.status == 'active' else 'btn-outline' }}">● Active</button>
+                </form>
+                <form method="post" action="{{ url_for('update_status', item_id=item.id) }}" style="display:inline">
+                  <input type="hidden" name="status" value="returned"/>
+                  <button type="submit" class="btn btn-sm {{ 'btn-returned-sel' if item.status == 'returned' else 'btn-outline' }}">✓ Returned</button>
+                </form>
+                <form method="post" action="{{ url_for('update_status', item_id=item.id) }}" style="display:inline">
+                  <input type="hidden" name="status" value="closed"/>
+                  <button type="submit" class="btn btn-sm {{ 'btn-closed-sel' if item.status == 'closed' else 'btn-outline' }}">✕ Closed</button>
+                </form>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Messaging -->
+        {% if session.user_id and session.user_id != item.user_id and item.status == 'active' %}
+        <div class="messages-card">
+          <h3>💬 Message {{ item.owner_name.split()[0] }}</h3>
+          {% if messages %}
+          <div class="messages-thread" id="msgThread">
+            {% for msg in messages %}
+            <div class="msg-bubble {{ 'sent' if msg.sender_id == session.user_id else 'received' }}">
+              <span class="msg-author">{{ msg.sender_name }}</span>
+              <p>{{ msg.message }}</p>
+              <span class="msg-time">{{ msg.created_at[:16] }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          <form method="post" action="{{ url_for('send_message') }}" class="msg-form">
+            <input type="hidden" name="item_id" value="{{ item.id }}"/>
+            <input type="hidden" name="receiver_id" value="{{ item.user_id }}"/>
+            <textarea name="message" placeholder="Type your message here..." required rows="3"></textarea>
+            <button type="submit" class="btn btn-primary">Send Message</button>
+          </form>
+        </div>
+        {% elif session.user_id == item.user_id and messages %}
+        <div class="messages-card">
+          <h3>💬 Messages about this item</h3>
+          <div class="messages-thread" id="msgThread">
+            {% for msg in messages %}
+            <div class="msg-bubble {{ 'sent' if msg.sender_id == session.user_id else 'received' }}">
+              <span class="msg-author">{{ msg.sender_name }}</span>
+              <p>{{ msg.message }}</p>
+              <span class="msg-time">{{ msg.created_at[:16] }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% set ns = namespace(replied=false) %}
+          {% for msg in messages %}
+            {% if msg.sender_id != session.user_id and not ns.replied %}
+            {% set ns.replied = true %}
+            <form method="post" action="{{ url_for('send_message') }}" class="msg-form">
+              <input type="hidden" name="item_id" value="{{ item.id }}"/>
+              <input type="hidden" name="receiver_id" value="{{ msg.sender_id }}"/>
+              <textarea name="message" placeholder="Reply to {{ msg.sender_name }}..." required rows="3"></textarea>
+              <button type="submit" class="btn btn-primary">Reply</button>
+            </form>
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% elif not session.user_id %}
+        <div class="login-prompt">
+          <p>🔒 <a href="{{ url_for('login') }}">Log in</a> to message the {{ "owner" if item.type == "lost" else "finder" }} of this item.</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="detail-sidebar">
+        {% if matches %}
+        <div class="matches-card">
+          <div class="matches-header">
+            <h3>🎯 Possible Matches</h3>
+            <span class="match-count">{{ matches|length }} found</span>
+          </div>
+          <p class="matches-sub">These {{ "found" if item.type == "lost" else "lost" }} items may be related to yours:</p>
+          {% for match in matches %}
+          <a href="{{ url_for('item_detail', item_id=match.item.id) }}" class="match-item">
+            {% if match.item.image_path %}
+            <img src="{{ url_for('static', filename='uploads/' + match.item.image_path) }}" alt="match" class="match-thumb"/>
+            {% else %}
+            <div class="match-thumb-placeholder">📦</div>
+            {% endif %}
+            <div class="match-info">
+              <strong>{{ match.item.title }}</strong>
+              <span>{{ match.item.location }}</span>
+              <span>{{ match.item.date_occurred }}</span>
+            </div>
+            <div class="match-score">
+              <span>{{ match.score }}</span>
+              <small>pts</small>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="matches-card no-match">
+          <h3>🔍 No Matches Yet</h3>
+          <p>No matching items found in the database yet. You'll be notified if a match appears!</p>
+        </div>
+        {% endif %}
+
+        <div class="sidebar-share">
+          <h4>Share this listing</h4>
+          <p>Help spread the word by sharing this listing with your classmates.</p>
+          <button class="btn btn-outline btn-full" onclick="copyLink()">📋 Copy Link</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script>
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => alert('Link copied to clipboard!'));
+  }
+  const thread = document.getElementById('msgThread');
+  if (thread) thread.scrollTop = thread.scrollHeight;
+</script>
+{% endblock %}

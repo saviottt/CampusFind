@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}CampusFind — Lost & Found Portal{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="hero-badge">🎓 Campus Lost & Found System</div>
+    <h1 class="hero-title">Lost something?<br><span class="accent">We'll help you find it.</span></h1>
+    <p class="hero-sub">A dedicated platform for students to report, search, and recover lost items across campus — fast and secure.</p>
+    <div class="hero-actions">
+      <a href="{{ url_for('report_item', item_type='lost') }}" class="btn btn-primary btn-lg">📋 Report Lost Item</a>
+      <a href="{{ url_for('report_item', item_type='found') }}" class="btn btn-outline btn-lg">🤲 Report Found Item</a>
+    </div>
+    <form class="hero-search" action="{{ url_for('search') }}" method="get">
+      <input type="text" name="q" placeholder="Search for your lost item…" class="hero-search-input"/>
+      <button type="submit" class="hero-search-btn">Search</button>
+    </form>
+  </div>
+  <div class="hero-visual">
+    <div class="floating-card fc1">
+      <span class="fc-icon">🎒</span>
+      <div><strong>Backpack Found</strong><small>Central Library</small></div>
+    </div>
+    <div class="floating-card fc2">
+      <span class="fc-icon">📱</span>
+      <div><strong>Phone Lost</strong><small>Cafeteria</small></div>
+    </div>
+    <div class="floating-card fc3">
+      <span class="fc-icon">🔑</span>
+      <div><strong>Keys Returned ✓</strong><small>Parking Area</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-number">{{ stats.lost_count or 0 }}</span>
+    <span class="stat-label">Active Lost Reports</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <span class="stat-number">{{ stats.found_count or 0 }}</span>
+    <span class="stat-label">Found Items Waiting</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <span class="stat-number">{{ stats.returned_count or 0 }}</span>
+    <span class="stat-label">Items Returned</span>
+  </div>
+</section>
+
+<section class="quick-filter">
+  <div class="container">
+    <h3 class="section-label">Browse by Category</h3>
+    <div class="category-chips">
+      {% for cat in categories %}
+        <a href="{{ url_for('search', category=cat) }}" class="chip">{{ cat }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="items-section">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <span class="section-tag lost-tag">LOST</span>
+        <h2 class="section-title">Recently Lost Items</h2>
+      </div>
+      <a href="{{ url_for('all_items', type='lost') }}" class="see-all">View all →</a>
+    </div>
+    {% if lost_items %}
+    <div class="items-grid">
+      {% for item in lost_items %}
+        {% include 'partials/item_card.html' %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <span class="empty-icon">🎉</span>
+      <p>No lost items reported recently. Great news!</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="items-section found-section">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <span class="section-tag found-tag">FOUND</span>
+        <h2 class="section-title">Recently Found Items</h2>
+      </div>
+      <a href="{{ url_for('all_items', type='found') }}" class="see-all">View all →</a>
+    </div>
+    {% if found_items %}
+    <div class="items-grid">
+      {% for item in found_items %}
+        {% include 'partials/item_card.html' %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <span class="empty-icon">👀</span>
+      <p>No found items reported yet. Be the first to help!</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="how-it-works">
+  <div class="container">
+    <h2 class="section-center-title">How It Works</h2>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-icon">📝</div>
+        <h3>Report Your Item</h3>
+        <p>Fill out a quick form describing your lost or found item — include photo, location, and date.</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-icon">🤖</div>
+        <h3>Smart Matching</h3>
+        <p>Our system automatically scans and suggests possible matches between lost and found reports.</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-icon">💬</div>
+        <h3>Connect & Recover</h3>
+        <p>Use our secure messaging to coordinate and get your item returned safely.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

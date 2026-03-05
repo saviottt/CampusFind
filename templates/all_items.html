@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ item_type.title() }} Items — CampusFind{% endblock %}
+{% block content %}
+<div class="all-items-page">
+  <div class="ai-header {{ item_type }}-header">
+    <div class="container">
+      <h1>{{ '📋 Lost Items' if item_type == 'lost' else '🤲 Found Items' }}</h1>
+      <p>{{ 'Browse all reported lost items on campus.' if item_type == 'lost' else 'These items are waiting to be claimed by their owners.' }}</p>
+      <div class="type-toggle">
+        <a href="{{ url_for('all_items', type='lost') }}" class="toggle-btn {{ 'active' if item_type == 'lost' }}">Lost Items</a>
+        <a href="{{ url_for('all_items', type='found') }}" class="toggle-btn {{ 'active' if item_type == 'found' }}">Found Items</a>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    {% if items %}
+    <div class="items-grid lg-grid">
+      {% for item in items %}
+        {% include 'partials/item_card.html' %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state large">
+      <span class="empty-icon">{{ '📋' if item_type == 'lost' else '🤲' }}</span>
+      <h3>No {{ item_type }} items reported yet</h3>
+      <p>Be the first to report a {{ item_type }} item on campus.</p>
+      <a href="{{ url_for('report_item', item_type=item_type) }}" class="btn btn-primary">
+        Report {{ item_type.title() }} Item
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
