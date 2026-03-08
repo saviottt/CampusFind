@@ -59,24 +59,111 @@ def login_required(f):
 
 @app.route("/")
 def index():
-
     db = get_db()
     cursor = db.cursor()
 
+    # Get stats
+    cursor.execute("""
+        SELECT 
+            SUM(CASE WHEN type = 'lost' AND status = 'active' THEN 1 ELSE 0 END) as lost_count,
+            SUM(CASE WHEN type = 'found' AND status = 'active' THEN 1 ELSE 0 END) as found_count,
+            SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) as returned_count
+        FROM items
+    """)
+    stats_data = cursor.fetchone()
+    # Handle NULL counts
+    stats = {
+        'lost_count': stats_data['lost_count'] or 0 if stats_data else 0,
+        'found_count': stats_data['found_count'] or 0 if stats_data else 0,
+        'returned_count': stats_data['returned_count'] or 0 if stats_data else 0
+    }
+
+    # Fetch recently lost items
     cursor.execute("""
         SELECT items.*, users.name AS owner_name
         FROM items
         JOIN users ON items.user_id = users.id
+        WHERE items.type = 'lost'
         ORDER BY items.created_at DESC
-        LIMIT 10
+        LIMIT 6
     """)
+    lost_items = cursor.fetchall()
 
-    items = cursor.fetchall()
+    # Fetch recently found items
+    cursor.execute("""
+        SELECT items.*, users.name AS owner_name
+        FROM items
+        JOIN users ON items.user_id = users.id
+        WHERE items.type = 'found'
+        ORDER BY items.created_at DESC
+        LIMIT 6
+    """)
+    found_items = cursor.fetchall()
 
     cursor.close()
     db.close()
 
-    return render_template("index.html", items=items)
+    categories = ["Electronics", "Bags/Wallets", "Keys", "ID/Cards", "Clothing", "Other"]
+
+    return render_template("index.html", 
+                           stats=stats, 
+                           lost_items=lost_items, 
+                           found_items=found_items, 
+                           categories=categories)
+
+# ================= SEARCH AND ALL ITEMS =================
+
+@app.route("/search")
+def search():
+    query = request.args.get("q", "")
+    category = request.args.get("category", "")
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    sql = "SELECT items.*, users.name AS owner_name FROM items JOIN users ON items.user_id = users.id WHERE 1=1"
+    params = []
+    
+    if query:
+        sql += " AND (items.title LIKE %s OR items.description LIKE %s)"
+        params.extend([f"%{query}%", f"%{query}%"])
+        
+    if category:
+        sql += " AND items.category = %s"
+        params.append(category)
+        
+    sql += " ORDER BY items.created_at DESC"
+    
+    cursor.execute(sql, tuple(params))
+    items = cursor.fetchall()
+    
+    cursor.close()
+    db.close()
+    
+    return render_template("search.html", items=items, query=query, category=category)
+
+@app.route("/items/<type>")
+def all_items(type):
+    if type not in ['lost', 'found']:
+        return redirect(url_for('index'))
+        
+    db = get_db()
+    cursor = db.cursor()
+    
+    cursor.execute("""
+        SELECT items.*, users.name AS owner_name 
+        FROM items 
+        JOIN users ON items.user_id = users.id 
+        WHERE items.type = %s 
+        ORDER BY items.created_at DESC
+    """, (type,))
+    
+    items = cursor.fetchall()
+    
+    cursor.close()
+    db.close()
+    
+    return render_template("all_items.html", items=items, type=type)
 
 
 # ================= REGISTER =================
@@ -227,23 +314,104 @@ def report_item(item_type):
 
 @app.route("/item/<int:item_id>")
 def item_detail(item_id):
-
     db = get_db()
     cursor = db.cursor()
 
     cursor.execute("""
-        SELECT items.*, users.name AS owner_name
+        SELECT items.*, users.name AS owner_name, users.department, users.student_id
         FROM items
         JOIN users ON items.user_id = users.id
         WHERE items.id=%s
     """, (item_id,))
-
     item = cursor.fetchone()
+
+    messages = []
+    matches = []
+
+    if item:
+        # Fetch Matches
+        cursor.execute("""
+            SELECT items.*, users.name AS owner_name
+            FROM items
+            JOIN users ON items.user_id = users.id
+            WHERE items.type != %s AND items.category = %s AND items.status = 'active'
+            LIMIT 5
+        """, (item['type'], item['category']))
+        potential_matches = cursor.fetchall()
+        for p in potential_matches:
+            matches.append({'item': p, 'score': 85})
+
+        # Fetch Messages
+        if "user_id" in session:
+            uid = session["user_id"]
+            if uid == item["user_id"]:
+                cursor.execute("""
+                    SELECT m.*, u.name as sender_name 
+                    FROM messages m 
+                    JOIN users u ON m.sender_id = u.id 
+                    WHERE m.item_id = %s 
+                    ORDER BY m.created_at ASC
+                """, (item_id,))
+                messages = cursor.fetchall()
+            else:
+                cursor.execute("""
+                    SELECT m.*, u.name as sender_name 
+                    FROM messages m 
+                    JOIN users u ON m.sender_id = u.id 
+                    WHERE m.item_id = %s AND (m.sender_id = %s OR m.receiver_id = %s)
+                    ORDER BY m.created_at ASC
+                """, (item_id, uid, uid))
+                messages = cursor.fetchall()
 
     cursor.close()
     db.close()
 
-    return render_template("item_detail.html", item=item)
+    return render_template("item_detail.html", item=item, messages=messages, matches=matches)
+
+
+# ================= UPDATE STATUS =================
+
+@app.route("/item/<int:item_id>/status", methods=["POST"])
+@login_required
+def update_status(item_id):
+    status = request.form.get("status")
+    if status in ['active', 'returned', 'closed']:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute(
+            "UPDATE items SET status = %s WHERE id = %s AND user_id = %s",
+            (status, item_id, session["user_id"])
+        )
+        db.commit()
+        cursor.close()
+        db.close()
+        flash("Status updated successfully", "success")
+        
+    return redirect(url_for("item_detail", item_id=item_id))
+
+
+# ================= SEND MESSAGE =================
+
+@app.route("/message/send", methods=["POST"])
+@login_required
+def send_message():
+    item_id = request.form.get("item_id")
+    receiver_id = request.form.get("receiver_id")
+    message = request.form.get("message")
+    
+    if item_id and receiver_id and message:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute("""
+            INSERT INTO messages (sender_id, receiver_id, item_id, message)
+            VALUES (%s, %s, %s, %s)
+        """, (session["user_id"], receiver_id, item_id, message))
+        db.commit()
+        cursor.close()
+        db.close()
+        flash("Message sent successfully", "success")
+        
+    return redirect(url_for("item_detail", item_id=item_id))
 
 
 # ================= PROFILE =================
@@ -251,21 +419,42 @@ def item_detail(item_id):
 @app.route("/profile")
 @login_required
 def profile():
-
     db = get_db()
     cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM users WHERE id=%s", (session["user_id"],))
+    user = cursor.fetchone()
 
     cursor.execute(
         "SELECT * FROM items WHERE user_id=%s ORDER BY created_at DESC",
         (session["user_id"],)
     )
-
     my_items = cursor.fetchall()
+
+    cursor.execute(
+        "SELECT * FROM notifications WHERE user_id=%s ORDER BY created_at DESC",
+        (session["user_id"],)
+    )
+    notifications = cursor.fetchall()
 
     cursor.close()
     db.close()
 
-    return render_template("profile.html", my_items=my_items)
+    return render_template("profile.html", user=user, my_items=my_items, notifications=notifications)
+
+
+# ================= FILTERS =================
+
+@app.template_filter('format_datetime')
+def format_datetime(value, format='datetime'):
+    if value is None:
+        return ""
+    import datetime
+    if isinstance(value, (datetime.datetime, datetime.date)):
+        return str(value)[:int(format)] if str(format).isdigit() else str(value)
+    if isinstance(value, str):
+        return value[:int(format)] if str(format).isdigit() else value
+    return str(value)
 
 
 # ================= RUN =================
